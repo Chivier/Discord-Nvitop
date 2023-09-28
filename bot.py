@@ -12,6 +12,7 @@ with open('./config.json') as data_file:
     config = json.load(data_file)
 
 def GPUStatusStr():
+    # Return a string of GPU status
     fire = "🔥"
     work = "🤖"
     result_str = ""
@@ -20,7 +21,7 @@ def GPUStatusStr():
         processes = device.processes()  # type: Dict[int, GpuProcess]
         sorted_pids = sorted(processes.keys())
 
-        result_str += "## " + str(device.name()) + "\n"
+        result_str += "### " + str(device.name()) + "\n"
         if device.fan_speed() >= 85:
             result_str += (f'- Fan speed:       {device.fan_speed()}%  {fire}') + "\n"
         else:
@@ -37,12 +38,13 @@ def GPUStatusStr():
             result_str += (f'- GPU utilization: {device.gpu_utilization()}%') + "\n"
 
         result_str += (f'- Memory:          {device.memory_used_human()}/{device.memory_total_human()}') + "\n"
-        result_str += (f'  - Processes ({len(processes)}): {sorted_pids}') + "\n"
+        result_str += (f'- Processes ({len(processes)}): {sorted_pids}') + "\n"
         for pid in sorted_pids:
-            result_str += (f'    - {processes[pid]}') + "\n"
+            result_str += (f'  - {processes[pid]}') + "\n"
     return result_str
 
 def GPUStatus():
+    # Return a dict of GPU status
     devices = Device.all()
     status = {}
     available_devices = []
@@ -74,24 +76,20 @@ def StatusDelta(old_status, new_status):
         for pid, process in new_status[device_name].items():
             if pid not in old_process_pid_on_current_device:
                 new_process.append(process)
-    print(old_process)
-    print(new_process)
     if len(old_process) == 0 and len(new_process) == 0:
         return ""
-    result_str = f"# Device report on {config['machine']}\n"
-    result_str += f"Time: {time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))}\n"
-    result_str += f"- Available devices number: {new_status['available_devices_count']}\n"
+    result_str = f"# {time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))} Device report on {config['machine']}\n"
+    result_str += f"- Available devices number: 🤖 {new_status['available_devices_count']}\n"
     result_str += f"- Available devices: {new_status['available_devices']}\n"
-    result_str += f"# Terminated: {len(old_process)}\n"
+    result_str += f"## Logs\n"
     for process in old_process:
         username = process.username()
         pid = process.pid
-        result_str += f"- {username} process {pid} ends\n"
-    result_str += f"# Started: {len(new_process)}\n"
+        result_str += f"- ⛔ {username} process {pid} terminates\n"
     for process in new_process:
         username = process.username()
         pid = process.pid
-        result_str += f"- {username} process {pid} starts\n"
+        result_str += f"- 🆕 {username} process {pid} starts\n"
     return result_str
 
 
@@ -100,9 +98,10 @@ def GetHelp():
     help_str += "- help: get help\n"
     help_str += "- gala: get gala gpu status\n"
     help_str += "- jazz: get jazz gpu status\n"
+    help_str += "- num: get number of gpu\n"
     return help_str
 
-# Bot main 
+# Bot main
 intents = discord.Intents.default()
 # client = discord.Client(intents=intents)
 bot = commands.Bot(command_prefix='.', intents=intents)
@@ -116,34 +115,36 @@ async def on_ready():
 async def on_message(message):
     if message.content == 'help':
         await message.channel.send(GetHelp())
-    if message.content == config['machine']:
+    elif message.content == config['machine']:
         await message.channel.send(GPUStatusStr())
+    elif message.content == "num":
+        GPU_status = GPUStatus()
+        result_str = f"Available devices number on {config['machine']}: {GPU_status['available_devices_count']}"
+        await message.channel.send(result_str)
+    
 
-@tasks.loop(seconds=3)
+@tasks.loop(seconds=30)
 async def watch_machine():
     global GPU_status
     # GPU_status = GPUStatus()
     # while not bot.is_closed():
     current_status = GPUStatus()
-    
+
     result_str = StatusDelta(GPU_status, current_status)
     GPU_status = current_status
     if result_str == "":
         return
 
-    channel = bot.get_channel(1156867585703419934)
+    channel = bot.get_channel(config['channel_id'])
     if channel is not None:
         await channel.send(result_str)
     else:
         print("channel not found")
-        
+
 @watch_machine.before_loop
 async def before_watch_machine():
     global GPU_status
-    GPU_status = GPUStatus()       
+    GPU_status = GPUStatus()
 
-# client.run(config['token'])
 GPU_status = GPUStatus()
 bot.run(config['token'])
-# gpu_status = GPUStatus()
-# print(gpu_status)
