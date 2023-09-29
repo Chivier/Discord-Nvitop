@@ -145,6 +145,8 @@ async def watch_machine():
 async def before_watch_machine():
     global GPU_status
     GPU_status = GPUStatus()
+    channel = bot.get_channel(config['channel_id'])
+    await channel.send(f"{config['machine']} is ready!")
 
 GPU_status = GPUStatus()
 bot.run(config['token'])
