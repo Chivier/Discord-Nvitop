@@ -38,9 +38,9 @@ def GPUStatusStr():
             result_str += (f'- GPU utilization: {device.gpu_utilization()}%') + "\n"
 
         result_str += (f'- Memory:          {device.memory_used_human()}/{device.memory_total_human()}') + "\n"
-        result_str += (f'- Processes ({len(processes)}): {sorted_pids}') + "\n"
+        result_str += (f'- Processes ({len(processes)}):') + "\n"
         for pid in sorted_pids:
-            result_str += (f'  - {processes[pid]}') + "\n"
+            result_str += (f'  - {processes[pid].username()} ({pid})') + "\n"
     return result_str
 
 def GPUStatus():
@@ -123,7 +123,7 @@ async def on_message(message):
         await message.channel.send(result_str)
     
 
-@tasks.loop(seconds=30)
+@tasks.loop(seconds=1800)
 async def watch_machine():
     global GPU_status
     # GPU_status = GPUStatus()
