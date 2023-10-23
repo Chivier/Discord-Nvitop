@@ -114,7 +114,8 @@ async def on_ready():
 @bot.event
 async def on_message(message):
     if message.content == 'help':
-        await message.channel.send(GetHelp())
+        if config['help_host']:
+            await message.channel.send(GetHelp())
     elif message.content == config['machine']:
         await message.channel.send(GPUStatusStr())
     elif message.content == "num":
